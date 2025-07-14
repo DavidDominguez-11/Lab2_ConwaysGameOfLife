@@ -269,75 +269,69 @@ fn render(framebuffer: &mut Framebuffer, grid: &mut Vec<Vec<bool>>) {
 }
 
 fn main() {
-    let window_width = 800;
+    let window_width = 600;
     let window_height = 600;
-
-    // La resolución del framebuffer es más pequeña para el Juego de la Vida
-    let framebuffer_game_width = 100;
-    let framebuffer_game_height = 100;
+    let framebuffer_game_width = 150;
+    let framebuffer_game_height = 150;
 
     let (mut window, raylib_thread) = raylib::init()
-        .size(window_width, window_height) // Establece las dimensiones de la ventana
-        .title("Juego de la Vida de Conway") // Establece el título de la ventana
-        .log_level(TraceLogLevel::LOG_WARNING) // Establece el nivel de registro
-        .build(); // Construye la ventana
+        .size(window_width, window_height)
+        .title("Juego de la Vida - David Dominguez 23712")
+        .log_level(TraceLogLevel::LOG_WARNING)
+        .build();
 
-    // Crea una instancia de tu Framebuffer personalizado con la resolución del juego
     let mut framebuffer = Framebuffer::new(framebuffer_game_width, framebuffer_game_height);
-
-    // Inicializa la cuadrícula del Juego de la Vida
     let mut game_grid = vec![vec![false; framebuffer_game_width as usize]; framebuffer_game_height as usize];
 
-    // --- Definir el patrón inicial ---
+    // --- Configuración ultra-densa ---
     let mut initial_pattern_coords: Vec<(u32, u32)> = Vec::new();
 
-    // Gliders
-    add_glider(&mut initial_pattern_coords, 5, 5);
-    add_glider(&mut initial_pattern_coords, 15, 10);
-    add_glider(&mut initial_pattern_coords, 25, 15);
-    add_glider(&mut initial_pattern_coords, 70, 50);
+    // 1. GLIDERS: 40% de la pantalla (patrón de abeja)
+    for x in (0..framebuffer_game_width).step_by(8) {
+        for y in (0..framebuffer_game_height).step_by(8) {
+            if (x + y) % 16 == 0 { // Patrón hexagonal
+                add_glider(&mut initial_pattern_coords, x, y);
+                add_glider(&mut initial_pattern_coords, x + 4, y + 4); // Dirección opuesta
+            }
+        }
+    }
 
-    // Lightweight Spaceships
-    add_lightweight_spaceship(&mut initial_pattern_coords, 5, 30);
-    add_lightweight_spaceship(&mut initial_pattern_coords, 20, 40);
+    // 2. NAVES LWSS: 30% de la pantalla
+    for x in (0..framebuffer_game_width).step_by(12) {
+        for y in [25, 75, 125] {
+            add_lightweight_spaceship(&mut initial_pattern_coords, x, y);
+        }
+    }
 
-    // Oscillators
-    add_blinker(&mut initial_pattern_coords, 50, 5);
-    add_blinker(&mut initial_pattern_coords, 50, 10);
-    add_toad(&mut initial_pattern_coords, 60, 20);
-    add_beacon(&mut initial_pattern_coords, 70, 30);
+    // 3. GENERADORES DE CAOS: 25% de la pantalla
+    // Pulsars en cuadrícula
+    for x in (20..framebuffer_game_width).step_by(40) {
+        for y in (20..framebuffer_game_height).step_by(40) {
+            add_pulsar(&mut initial_pattern_coords, x, y);
+        }
+    }
+    // Pentadecathlons cada 60px
+    for y in (10..framebuffer_game_height).step_by(60) {
+        add_pentadecathlon(&mut initial_pattern_coords, 75, y);
+    }
 
-    // Still Lifes
-    add_block(&mut initial_pattern_coords, 80, 5);
-    add_tub(&mut initial_pattern_coords, 85, 15);
-    add_boat(&mut initial_pattern_coords, 90, 25);
-    add_loaf(&mut initial_pattern_coords, 75, 35);
-    add_beehive(&mut initial_pattern_coords, 80, 45);
+    // 4. STILL LIFES (solo 2% como referencia)
+    for x in [10, 140] {
+        add_block(&mut initial_pattern_coords, x, 10);
+        add_tub(&mut initial_pattern_coords, x, 140);
+    }
 
-    // Complex oscillator (Pulsar) - requires more space
-    add_pulsar(&mut initial_pattern_coords, 10, 60);
-
-    // Pentadecathlon - requires more space
-    add_pentadecathlon(&mut initial_pattern_coords, 40, 70);
-
-
-    // Establece las células iniciales en la cuadrícula
+    // Aplicamos todas las células al grid
     for &(x, y) in &initial_pattern_coords {
         if x < framebuffer_game_width && y < framebuffer_game_height {
             game_grid[y as usize][x as usize] = true;
         }
     }
 
-    // Bucle principal del juego: continúa mientras la ventana no deba cerrarse
+    // Bucle principal (más rápido para ver la evolución)
     while !window.window_should_close() {
-        // 1. Dibuja y actualiza el estado del juego
-        // La función render ahora maneja la lógica del Juego de la Vida y el dibujo.
         render(&mut framebuffer, &mut game_grid);
-
-        // 2. Intercambia los buffers (muestra el framebuffer en la ventana)
         framebuffer.swap_buffers(&mut window, &raylib_thread);
-
-        // Introduce un pequeño retraso para controlar la velocidad de la animación
-        thread::sleep(Duration::from_millis(100)); // Un delay más largo para visualizar mejor
+        thread::sleep(Duration::from_millis(50)); // 50ms para más acción
     }
 }
